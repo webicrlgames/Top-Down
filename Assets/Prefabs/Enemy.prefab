@@ -800,7 +800,7 @@ GameObject:
   - component: {fileID: -6068112727941347019}
   m_Layer: 0
   m_Name: Enemy
-  m_TagString: Untagged
+  m_TagString: Enemy
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -840,14 +840,14 @@ CapsuleCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
   m_Radius: 0.5
-  m_Height: 2.0481374
+  m_Height: 2.5621338
   m_Direction: 1
-  m_Center: {x: 0, y: -0.001079917, z: 0}
+  m_Center: {x: 0, y: 0.25591826, z: 0}
 --- !u!195 &1540568083831582668
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -882,10 +882,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f8d18b87139ba4648af81ec21c0bbab5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  vida: 10
+  vida: 5
   "da\xF1oColision": 1
-  agent: {fileID: 0}
-  player: {fileID: 0}
 --- !u!1 &4548678922038211520
 GameObject:
   m_ObjectHideFlags: 0

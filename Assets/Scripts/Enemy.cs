@@ -3,39 +3,65 @@ using UnityEngine.AI;
 
 public class Enemy : MonoBehaviour
 {
-    public int vida = 10;
+    public int vidaMax = 10;
+    private int vidaActual;
     public int dañoColision = 1;
-    public NavMeshAgent agent;
-    public Transform player;
-    void Start()
+
+    private NavMeshAgent agent;
+    private Transform player;
+
+    void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
-        player = GameObject.FindGameObjectWithTag("Player").transform;
-
-        InvokeRepeating("SetDestination", 5f, 1f);
     }
-    void OnTriggerEnter(Collider other)
+
+    void OnEnable()
     {
-        if (other.CompareTag("bullet"))
+        vidaActual = vidaMax;
+
+        player = GameObject.FindGameObjectWithTag("Player")?.transform;
+
+        if (agent != null && agent.isOnNavMesh)
         {
-            vida -= dañoColision;
-            Destroy(other.gameObject);
-            if (vida <= 0)
-            {
-                Muerte();
-            }
+            InvokeRepeating(nameof(SetDestination), 0.5f, 1f);
+        }
+    }
+
+    void OnDisable()
+    {
+        CancelInvoke();
+    }
+
+    public void RecibirDaño(int cantidad)
+    {
+        vidaActual -= cantidad;
+
+        if (vidaActual <= 0)
+        {
+            Muerte();
         }
     }
 
     void Muerte()
     {
-        Debug.Log("¡El objeto ha muerto!");
-        Destroy(this.gameObject);
-
+        Debug.Log("¡El enemigo murió!");
+        gameObject.SetActive(false);
+        ScoreManager.Instance.AddScore(1);
     }
+
+    void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("Player"))
+        {
+            PlayerController playerController = other.GetComponent<PlayerController>();
+        }
+    }
+
     public void SetDestination()
     {
-        agent.destination = player.position;
+        if (agent != null && agent.isOnNavMesh && player != null)
+        {
+            agent.destination = player.position;
+        }
     }
 }
-

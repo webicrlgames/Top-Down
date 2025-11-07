@@ -1,76 +1,105 @@
-﻿using System.Collections;
-using Unity.VisualScripting;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.InputSystem;
-using static UnityEngine.GraphicsBuffer;
 
-public class character_controler : MonoBehaviour
+public class PlayerController : MonoBehaviour
 {
-    public float gravityForce;
-    public float verticalVelocity;
+    [Header("Movimiento")]
+    public float speed = 5f;
     public CharacterController characterController;
-    public Vector2 MovementImput; 
-    [Range(1f, 10f)]
-    public float movementSpeed;
-    public Vector2 LookingImput;
-    public GameObject BulletPrefab;
-    public Transform spawnPoint;
-    public bool canShoot;
-    public float fireDelay = 1f;
+
+    [Header("Disparo")]
+    public Transform bulletSpawn;
+    public float fireRate = 0.2f;
+    private float nextFireTime;
+    public ObjectPool bulletPool;
+
+    [Header("Referencias")]
+    public Camera mainCamera;
+    public GameObject gameOverPanel;
+    public Renderer playerRenderer;
+
+    private Vector2 moveInput;
+    private Vector2 lookInput;
+
+    private IPlayerState currentState;
 
     private void Awake()
     {
         characterController = GetComponent<CharacterController>();
-        canShoot = true;
-    }
-    void Start()
-    {
-
+        if (mainCamera == null)
+            mainCamera = Camera.main;
     }
 
-    void Update()
+    private void Start()
     {
-        if (!characterController.isGrounded)
+        SwitchState(new PlayerInvulnerableState());
+    }
+
+    private void Update()
+    {
+        currentState?.UpdateState(this);
+
+        Vector3 move = new Vector3(moveInput.x, 0, moveInput.y);
+        characterController.Move(move * speed * Time.deltaTime);
+
+        if (mainCamera != null)
         {
-            verticalVelocity = gravityForce * Time.deltaTime;
+            Plane playerPlane = new Plane(Vector3.up, transform.position);
+            Ray ray = mainCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
+            if (playerPlane.Raycast(ray, out float hitDist))
+            {
+                Vector3 targetPoint = ray.GetPoint(hitDist);
+                Vector3 direction = targetPoint - transform.position;
+                direction.y = 0;
+                if (direction.sqrMagnitude > 0.001f)
+                    transform.rotation = Quaternion.LookRotation(direction);
+            }
         }
-        float MovimientoX = (MovementImput.x * movementSpeed * Time.deltaTime);
-        float MovimientoZ = (MovementImput.y * movementSpeed * Time.deltaTime);
-
-        Vector3 movement = new Vector3(MovimientoX, verticalVelocity, MovimientoZ);
-        characterController.Move(movement);
-
-        Vector3 look = new Vector3(LookingImput.x, 0f, LookingImput.y);
-        transform.LookAt(transform.position + look);
     }
-    public void Onlook(InputAction.CallbackContext context)
+
+    public void SwitchState(IPlayerState newState)
     {
-        LookingImput = context.ReadValue<Vector2>();
-
-
+        currentState = newState;
+        currentState.EnterState(this);
     }
+
     public void OnMove(InputAction.CallbackContext context)
     {
-        MovementImput = context.ReadValue<Vector2>();
-
-        Debug.Log("Move_Imput" + MovementImput);
-
+        moveInput = context.ReadValue<Vector2>();
     }
+
     public void OnShoot(InputAction.CallbackContext context)
     {
-        if (canShoot && context.performed)
+        if (context.performed && Time.time >= nextFireTime)
         {
-            StartCoroutine(Shoot());
+            nextFireTime = Time.time + fireRate;
+
+            if (bulletPool != null)
+            {
+                GameObject bullet = bulletPool.GetPooledObject();
+                if (bullet != null)
+                {
+                    bullet.transform.position = bulletSpawn.position;
+                    bullet.transform.rotation = bulletSpawn.rotation;
+                    bullet.SetActive(true);
+                    Rigidbody rb = bullet.GetComponent<Rigidbody>();
+                    if (rb != null)
+                        rb.linearVelocity = bulletSpawn.forward * 25f;
+                }
+            }
         }
     }
 
-    private IEnumerator Shoot()
+    private void OnTriggerEnter(Collider other)
     {
-        GameObject bulletClone = Instantiate(BulletPrefab, spawnPoint.position, spawnPoint.rotation);
-        canShoot = false;
+        currentState?.OnTriggerEnter(this, other);
+    }
 
-        yield return new WaitForSeconds(fireDelay); // ⏳ Espera
-
-        canShoot = true;
+    public void SetInvulnerableVisual(bool active)
+    {
+        if (playerRenderer != null)
+        {
+            playerRenderer.material.color = active ? Color.cyan : Color.white;
+        }
     }
 }
